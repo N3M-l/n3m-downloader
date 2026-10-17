@@ -17,13 +17,14 @@ htmlcov/
 pip-*
 .pip-cache/
 
-# Runtime data
+# Runtime and scratch data
 backend/.work/
 backend/.work-*/
 backend/tmp/
 backend/.tmp/
 backend/tmpbase/*
 !backend/tmpbase/.keep
+/tmpbase/
 backend/.env
 .env
 .env.local

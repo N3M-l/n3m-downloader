@@ -2,6 +2,8 @@
 
 > أداة تحميل وسائط شخصية بهوية **8-بت** عربية: ألصق الرابط، اكتشف المنصة تلقائيًا، وحمّل أفضل جودة مباشرة إلى جهازك.
 
+![واجهة N3M Downloader](docs/screenshot.png)
+
 - **الواجهة:** Next.js 15 (App Router) + TypeScript + تصدير ثابت (Static Export) لـ Cloudflare Pages.
 - **المحرك:** FastAPI + Python 3.12 + yt-dlp + gallery-dl + aria2c + FFmpeg.
 - **الإدارة:** `/admin/` محمية برمز `ADMIN_TOKEN`.

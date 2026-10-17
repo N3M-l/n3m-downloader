@@ -4,7 +4,9 @@ export default function HomePage() {
   return (
     <main className="page">
       <header className="hero">
-        <p className="hero__badge">◈ 8-BIT MEDIA TOOL ◈</p>
+        <p className="hero__badge" dir="ltr">
+          [ 8-BIT MEDIA TOOL ]
+        </p>
         <h1 className="hero__title" dir="ltr">
           <span>N3M</span> DOWNLOADER
         </h1>
