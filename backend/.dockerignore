@@ -1,0 +1,13 @@
+.venv/
+.deps/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+.env
+.work/
+tmpbase/
+tmp/
+tests/
+*.log
+pip-*

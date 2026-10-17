@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: n3m-downloader-engine
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: N3M_ENV
+        value: production
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: TICKET_SECRET
+        generateValue: true
+      - key: TRUSTED_ORIGINS
+        value: https://n3m.fun,https://www.n3m.fun
+      - key: MIN_FREE_GB
+        value: "2"
+      - key: MAX_FILESIZE_MB
+        value: "2048"
+      - key: MAX_CONCURRENT_JOBS
+        value: "2"
+      - key: MAX_QUEUED_JOBS
+        value: "20"
+      - key: JOB_RETENTION_MINUTES
+        value: "120"
+      - key: TICKET_TTL_SECONDS
+        value: "300"

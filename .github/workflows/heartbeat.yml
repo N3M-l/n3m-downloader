@@ -1,0 +1,16 @@
+name: Engine heartbeat
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Keep the Render engine awake
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET /health
+        run: |
+          curl --fail --silent --show-error --max-time 25 \
+            https://n3m-downloader-engine.onrender.com/health

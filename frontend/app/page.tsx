@@ -1,0 +1,24 @@
+import { Downloader } from '@/components/Downloader';
+
+export default function HomePage() {
+  return (
+    <main className="page">
+      <header className="hero">
+        <p className="hero__badge">◈ 8-BIT MEDIA TOOL ◈</p>
+        <h1 className="hero__title" dir="ltr">
+          <span>N3M</span> DOWNLOADER
+        </h1>
+        <p className="hero__sub">
+          ألصق الرابط. اكتشف المنصة تلقائيًا. حمّل أفضل جودة مباشرة إلى جهازك.
+        </p>
+      </header>
+
+      <Downloader />
+
+      <footer className="foot">
+        <span dir="ltr">N3M Downloader · v1.0</span>
+        <a href="/admin/">لوحة الإدارة ←</a>
+      </footer>
+    </main>
+  );
+}

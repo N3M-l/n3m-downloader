@@ -1,0 +1,43 @@
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Python
+.venv/
+.deps/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+pip-*
+.pip-cache/
+
+# Runtime data
+backend/.work/
+backend/.work-*/
+backend/tmp/
+backend/.tmp/
+backend/tmpbase/*
+!backend/tmpbase/.keep
+backend/.env
+.env
+.env.local
+*.log
+
+# Local test / build scratch
+frontend/.test-build/
+frontend/.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local backups (never committed)
+_backups/
