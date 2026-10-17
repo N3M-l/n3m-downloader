@@ -53,17 +53,25 @@ n3m-downloader/
 
 ## تشغيل سريع (محلي)
 
+**الطريقة الأسهل — نقرة مزدوجة:** `start_all.bat` في جذر المشروع. يفتح نافذتين: المحرك على `8765` والواجهة على `3000`، ثم يفتح المتصفح.
+
+المتطلبات:
+
+- Windows وNode.js 20+ (مثبت على هذا الجهاز).
+- Python 3.12+ لإنشاء `.venv` أول مرة فقط. إذا كان `backend/.venv` موجودًا — كما في هذه النسخة — فلا حاجة لـ Python على PATH.
+- لا حاجة لـ `pnpm`؛ المشغّلات تستخدم Node مباشرة.
+
 ### 1) المحرك
 
 **Windows — نقرة مزدوجة:** `backend/start_server.bat`
 
-يشغّل الملف البيئة الافتراضية، يثبّت الاعتماديات، ينشئ `backend/.env` بمفاتيح عشوائية، ويطبع رمز الإدارة، ثم يبدأ على `http://127.0.0.1:8765`.
+يستخدم البيئة الافتراضية إن وُجدت، يثبّت الاعتماديات عند الحاجة، ينشئ `backend/.env` بمفاتيح عشوائية، ويطبع رمز الإدارة، ثم يبدأ على `http://127.0.0.1:8765`.
 
 يدويًا:
 
 ```powershell
 cd backend
-python -m venv .venv
+if (!(Test-Path .venv)) { python -m venv .venv }
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe bootstrap.py
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8765
@@ -73,15 +81,27 @@ python -m venv .venv
 
 ### 2) الواجهة
 
+**Windows — نقرة مزدوجة:** `frontend/start_dev.bat`
+
+أو يدويًا:
+
 ```powershell
 cd frontend
+if (!(Test-Path node_modules\next)) { npm install }
 copy .env.example .env.local   # NEXT_PUBLIC_ENGINE_URL=http://127.0.0.1:8765
-pnpm install
-pnpm dev
+node node_modules\next\dist\bin\next dev -p 3000
 ```
 
 - الأداة: `http://localhost:3000`
-- الإدارة: `http://localhost:3000/admin/` (استخدم رمز الإدارة الذي طبعه bootstrap)
+- الإدارة: `http://localhost:3000/admin/` (استخدم `ADMIN_TOKEN` من `backend/.env`)
+
+### إن لم تعمل الصفحة
+
+- شغّل `start_all.bat` وانتظر ظهور `Ready` في نافذة الواجهة و`Application startup complete` في نافذة المحرك.
+- لا تغلق نافذة المحرك أثناء الاستخدام؛ إغلاقها يوقف التحميل.
+- افتح `http://localhost:3000` مباشرة، لا ملف HTML من المجلد.
+- فحص سريع: `http://127.0.0.1:8765/health` يجب أن يعيد `{"status":"ok"}`.
+- رمز الإدارة موجود في `backend/.env` ضمن `ADMIN_TOKEN`.
 
 ### 3) بناء الإنتاج
 
@@ -98,12 +118,10 @@ cd backend
 .\.venv\Scripts\python.exe -m pytest
 
 # الواجهة (46 اختبارًا: اكتشاف المنصات، التنسيق، السجل، التفضيلات، عميل API)
-cd frontend
-pnpm test
+frontend\test.bat
 
 # التحقق من الأنواع + بناء ثابت
-pnpm lint
-pnpm build
+frontend\build.bat
 ```
 
 > على Windows داخل بيئة مقيّدة قد تحتاج اختبارات الواجهة والبناء إلى تشغيل خارج الـ sandbox لأن Next/Vitest يشغّلان عمليات فرعية.
