@@ -20,7 +20,6 @@ import { messageFor } from '@/lib/format';
 import {
   detectPlatform,
   isProbablyUrl,
-  suggestedMode,
   withScheme,
   type DownloadMode,
   type Platform,
@@ -201,7 +200,13 @@ export function Downloader() {
       const detected = detectPlatform(value);
       platformRef.current = detected;
       const mode: DownloadMode =
-        prefs.quality === 'audio' ? 'audio' : suggestedMode(detected);
+        detected?.kind === 'file'
+          ? 'file'
+          : detected?.kind === 'images'
+            ? 'images'
+            : prefs.quality === 'audio'
+              ? 'audio'
+              : 'video';
       const result: StartResponse = await startDownload({
         url: withScheme(value),
         mode,

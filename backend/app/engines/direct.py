@@ -91,6 +91,9 @@ class DirectEngine:
         return path.rsplit("/", 1)[-1] or "n3m-file"
 
     async def download(self, job: Job) -> Path:
+        info = await self.inspect(job.url)
+        if info.get("title"):
+            job.title = str(info["title"])
         filename = safe_filename(job.title, fallback="n3m-file")
         destination = job.directory / filename
         aria = self.aria2c()

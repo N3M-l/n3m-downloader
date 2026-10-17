@@ -13,11 +13,24 @@ from pathlib import Path
 from ..config import Settings
 from ..errors import EngineError
 from ..jobs import Job
-from ..storage import ensure_extension, pick_output, safe_filename
+from ..storage import ensure_extension, safe_filename
 from .base import module_available, package_version, run_process, tail
 from .progress import parse_bytes, parse_eta, parse_percent, parse_speed
 
 LOGGER = logging.getLogger("n3m.ytdlp")
+
+MEDIA_EXTENSIONS = {
+    ".mp4",
+    ".webm",
+    ".mkv",
+    ".mov",
+    ".mp3",
+    ".m4a",
+    ".opus",
+    ".flac",
+    ".wav",
+    ".ogg",
+}
 
 PROGRESS_PREFIX = "N3MPROG"
 PROGRESS_TEMPLATE = (
@@ -290,19 +303,37 @@ class YtDlpEngine:
                 detail,
             )
 
-        output = pick_output(job.directory)
+        output = self._media_output(job.directory)
         if output is None:
             raise EngineError("download_failed", "لم ينتج المحرك أي ملف قابل للحفظ.")
         extension = output.suffix.lstrip(".") or ("mp3" if audio else "mp4")
-        target = job.directory / ensure_extension(safe_filename(job.title), extension)
-        if target.exists():
+        stem = safe_filename(
+            output.stem,
+            fallback=safe_filename(job.title, fallback="n3m-media"),
+        )
+        target = job.directory / ensure_extension(stem, extension)
+        if target.exists() and target != output:
             target = job.directory / f"{target.stem}-{job.id[:6]}.{extension}"
-        try:
-            output.replace(target)
-        except OSError:
-            target = output
+        if target != output:
+            try:
+                output.replace(target)
+            except OSError:
+                target = output
         job.update(progress=100, downloaded=target.stat().st_size, message="اكتمل التحميل.")
         return target
+
+    @staticmethod
+    def _media_output(directory: Path) -> Path | None:
+        candidates = [
+            item
+            for item in directory.rglob("*")
+            if item.is_file()
+            and item.suffix.lower() in MEDIA_EXTENSIONS
+            and not item.name.endswith(".part")
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item.stat().st_size)
 
     def _apply_progress(self, job: Job, payload: str) -> None:
         parts = payload.split("|")
