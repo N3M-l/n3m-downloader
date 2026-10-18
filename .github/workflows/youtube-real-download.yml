@@ -28,6 +28,26 @@ jobs:
         run: |
           python -m yt_dlp --no-playlist --skip-download --simulate --js-runtimes node \
             'https://www.youtube.com/watch?v=Zl-HU2U85lI'
+      - name: Download actual CC video on GitHub runner and verify media
+        id: runner_file
+        continue-on-error: true
+        run: |
+          python -m yt_dlp --no-playlist --js-runtimes node --max-filesize 60M \
+            --format 'best[height<=360]/best' \
+            --output "$RUNNER_TEMP/n3m-youtube-cc.%(ext)s" \
+            'https://www.youtube.com/watch?v=Zl-HU2U85lI'
+          python - <<'PY'
+          import glob, os, subprocess
+          files = [p for p in glob.glob(os.environ['RUNNER_TEMP'] + '/n3m-youtube-cc.*') if not p.endswith('.part')]
+          assert len(files) == 1, f'Expected one media file, got {len(files)}'
+          filename = files[0]
+          size = os.path.getsize(filename)
+          with open(filename, 'rb') as f:
+              header = f.read(32)
+          assert size > 4096 and (b'ftyp' in header or header.startswith(bytes.fromhex('1a45dfa3'))), 'Invalid media output'
+          print('GitHub runner file verified:', size, 'bytes')
+          subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1', filename], check=True)
+          PY
       - name: Test actual file download on Render Oregon staging
         id: remote
         continue-on-error: true
@@ -39,8 +59,10 @@ jobs:
         env:
           EXTRACTOR_RESULT: ${{ steps.runner.outcome }}
           REMOTE_RESULT: ${{ steps.remote.outcome }}
+          RUNNER_FILE_RESULT: ${{ steps.runner_file.outcome }}
         run: |
           echo "Standalone extractor: $EXTRACTOR_RESULT"
+          echo "GitHub runner file test: $RUNNER_FILE_RESULT"
           echo "Render Oregon actual-file test: $REMOTE_RESULT"
           if [ "$REMOTE_RESULT" != "success" ]; then
             echo "::error::YouTube download is not verified working on staging."
