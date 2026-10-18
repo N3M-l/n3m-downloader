@@ -49,7 +49,7 @@ jobs:
               start_url: {url},
               actions: name === 'n3m'
                 ? [
-                  {step_id:'enter-test-url',action:'fill',locator:{kind:'css',selector:'#media-url'},value:'https://www.youtube.com/watch?v=Zl-HU2U85lI'},
+                  {step_id:'enter-test-url',action:'fill',locator:{kind:'css',selector:'#media-url'},value:{source:'literal',value:'https://www.youtube.com/watch?v=Zl-HU2U85lI'}},
                   {step_id:'submit-download',action:'click',locator:{kind:'css',selector:'form button[type="submit"]'},timeout_ms:10000},
                   {step_id:'await-status',action:'wait_for_timeout',duration_ms:10000}
                 ]
