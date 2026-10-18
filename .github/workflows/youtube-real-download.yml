@@ -1,0 +1,48 @@
+name: YouTube Real Download Diagnostic
+
+on:
+  push:
+    branches: [diagnostics/youtube-smoke-20261018]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  youtube-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install matching yt-dlp and EJS
+        run: python -m pip install --disable-pip-version-check 'yt-dlp[default]>=2026.8.19'
+      - name: Test extractor on GitHub runner (comparison only)
+        id: runner
+        continue-on-error: true
+        run: |
+          python -m yt_dlp --no-playlist --skip-download --simulate --js-runtimes node \
+            'https://www.youtube.com/watch?v=Zl-HU2U85lI'
+      - name: Test actual file download on Render Oregon staging
+        id: remote
+        continue-on-error: true
+        env:
+          N3M_SMOKE_ENGINE: https://n3m-downloader-engine-us.onrender.com
+        run: python backend/tests/smoke_remote_youtube.py
+      - name: Results
+        if: always()
+        env:
+          EXTRACTOR_RESULT: ${{ steps.runner.outcome }}
+          REMOTE_RESULT: ${{ steps.remote.outcome }}
+        run: |
+          echo "Standalone extractor: $EXTRACTOR_RESULT"
+          echo "Render Oregon actual-file test: $REMOTE_RESULT"
+          if [ "$REMOTE_RESULT" != "success" ]; then
+            echo "::error::YouTube download is not verified working on staging."
+            exit 1
+          fi
