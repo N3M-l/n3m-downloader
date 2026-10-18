@@ -1,6 +1,7 @@
 """Regression tests for YouTube proxy failure and verification reporting."""
 from __future__ import annotations
 
+import asyncio
 import pytest
 
 from app.config import Settings
@@ -27,8 +28,7 @@ def test_youtube_verification_message():
     assert "يوتيوب" in _failure_message(detail, "generic")
 
 
-@pytest.mark.asyncio
-async def test_inspect_retries_direct_when_proxy_connection_fails(settings: Settings, monkeypatch):
+def test_inspect_retries_direct_when_proxy_connection_fails(settings: Settings, monkeypatch):
     engine = YtDlpEngine(settings)
     monkeypatch.setattr(engine, "available", lambda: True)
     monkeypatch.setattr(engine, "proxy_args", lambda url: ["--proxy", "socks5://127.0.0.1:8086"])
@@ -44,15 +44,14 @@ async def test_inspect_retries_direct_when_proxy_connection_fails(settings: Sett
         return 0, b'{"title":"Test video","formats":[]}', b""
 
     monkeypatch.setattr("app.engines.ytdlp.run_process", fake_run)
-    result = await engine.inspect("https://www.youtube.com/watch?v=test")
+    result = asyncio.run(engine.inspect("https://www.youtube.com/watch?v=test"))
     assert result["title"] == "Test video"
     assert len(commands) == 2
     assert "--proxy" in commands[0]
     assert "--proxy" not in commands[1]
 
 
-@pytest.mark.asyncio
-async def test_inspect_does_not_retry_bot_denial(settings: Settings, monkeypatch):
+def test_inspect_does_not_retry_bot_denial(settings: Settings, monkeypatch):
     engine = YtDlpEngine(settings)
     monkeypatch.setattr(engine, "available", lambda: True)
     monkeypatch.setattr(engine, "proxy_args", lambda url: ["--proxy", "socks5://127.0.0.1:8086"])
@@ -67,6 +66,6 @@ async def test_inspect_does_not_retry_bot_denial(settings: Settings, monkeypatch
 
     monkeypatch.setattr("app.engines.ytdlp.run_process", fake_run)
     with pytest.raises(EngineError) as exc:
-        await engine.inspect("https://www.youtube.com/watch?v=test")
+        asyncio.run(engine.inspect("https://www.youtube.com/watch?v=test"))
     assert exc.value.code == "youtube_verification_required"
     assert len(commands) == 1
