@@ -120,6 +120,8 @@ class Settings:
     aria2c_path: str
     ffmpeg_path: str
     ytdlp_player_client: str
+    youtube_cookies_b64: str
+    ytdlp_proxy: str
 
     @property
     def is_production(self) -> bool:
@@ -186,6 +188,8 @@ class Settings:
             aria2c_path=_env("ARIA2C_BIN", "aria2c"),
             ffmpeg_path=_env("FFMPEG_BIN", "ffmpeg"),
             ytdlp_player_client=_env("YTDLP_PLAYER_CLIENT", "tv,mweb"),
+            youtube_cookies_b64=_env("YOUTUBE_COOKIES_B64"),
+            ytdlp_proxy=_env("YTDLP_PROXY"),
         )
 
     def prepare_dirs(self) -> None:

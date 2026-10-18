@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import re
@@ -45,6 +46,42 @@ class YtDlpEngine:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.cookies_path = self._prepare_cookies()
+
+    def _prepare_cookies(self) -> Path | None:
+        raw = self.settings.youtube_cookies_b64.strip()
+        if not raw:
+            return None
+        try:
+            data = base64.b64decode(raw, validate=True)
+        except (ValueError, TypeError):
+            LOGGER.warning("YOUTUBE_COOKIES_B64 is not valid base64; ignoring it")
+            return None
+        if not data:
+            return None
+        path = self.settings.work_dir / "youtube-cookies.txt"
+        try:
+            path.write_bytes(data)
+            path.chmod(0o600)
+        except OSError:
+            LOGGER.exception("could not write the YouTube cookie file")
+            return None
+        return path
+
+    def cookies_args(self) -> list[str]:
+        if self.cookies_path and self.cookies_path.is_file():
+            return ["--cookies", str(self.cookies_path)]
+        return []
+
+    def proxy_args(self, url: str) -> list[str]:
+        """Route YouTube through the optional WARP/proxy egress only."""
+        proxy = self.settings.ytdlp_proxy.strip()
+        if not proxy:
+            return []
+        lowered = url.lower()
+        if "youtube.com" not in lowered and "youtu.be" not in lowered:
+            return []
+        return ["--proxy", proxy]
 
     # ------------------------------------------------------------------ paths
     def command(self) -> list[str]:
@@ -103,6 +140,8 @@ class YtDlpEngine:
             "--no-check-formats",
             *self.impersonation_args(),
             *self.extractor_args(),
+            *self.cookies_args(),
+            *self.proxy_args(url),
             url,
         ]
         code, stdout, stderr = await run_process(command, timeout=75)
@@ -262,6 +301,8 @@ class YtDlpEngine:
             "4",
             *self.impersonation_args(),
             *self.extractor_args(),
+            *self.cookies_args(),
+            *self.proxy_args(job.url),
             "--max-filesize",
             f"{self.settings.max_filesize_mb}M",
             "--progress-template",

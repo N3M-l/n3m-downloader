@@ -25,6 +25,12 @@ services:
         value: "1"
       - key: MAX_QUEUED_JOBS
         value: "10"
+      - key: WARP_ENABLED
+        value: "1"
+      - key: YTDLP_PROXY
+        value: socks5://127.0.0.1:8086
+      - key: YTDLP_PLAYER_CLIENT
+        value: tv,mweb
       - key: JOB_RETENTION_MINUTES
         value: "120"
       - key: TICKET_TTL_SECONDS
