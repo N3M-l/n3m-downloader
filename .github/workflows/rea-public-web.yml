@@ -41,15 +41,16 @@ jobs:
           const path = require('node:path');
           const tests = {
             n3m: 'https://n3m.fun/downloader/',
+            n3m_direct: 'https://n3m.fun/downloader/',
             cobalt: 'https://cobalt.tools/'
           };
           for (const [name, url] of Object.entries(tests)) {
             const scenario = {
               browser: {mode: 'launch', executable_path: process.env.CHROME, headless: true},
               start_url: {url},
-              actions: name === 'n3m'
+              actions: name.startsWith('n3m')
                 ? [
-                  {step_id:'enter-test-url',action:'fill',locator:{kind:'css',selector:'#media-url'},value:{source:'literal',value:'https://www.youtube.com/watch?v=Zl-HU2U85lI'}},
+                  {step_id:'enter-test-url',action:'fill',locator:{kind:'css',selector:'#media-url'},value:{source:'literal',value:name === 'n3m_direct' ? 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4' : 'https://www.youtube.com/watch?v=Zl-HU2U85lI'}},
                   {step_id:'submit-download',action:'click',locator:{kind:'css',selector:'form button[type="submit"]'},timeout_ms:10000},
                   {step_id:'await-status',action:'wait_for_timeout',duration_ms:10000}
                 ]
@@ -64,16 +65,19 @@ jobs:
           N3M_CODE=$?
           npx --yes rea-agents@6.5.0 capture-browser-scenario "$RUNNER_TEMP/rea-cobalt.json" --json > "$RUNNER_TEMP/rea-cobalt-result.json" 2> "$RUNNER_TEMP/rea-cobalt-error.log"
           COBALT_CODE=$?
+          npx --yes rea-agents@6.5.0 capture-browser-scenario "$RUNNER_TEMP/rea-n3m_direct.json" --json > "$RUNNER_TEMP/rea-n3m_direct-result.json" 2> "$RUNNER_TEMP/rea-n3m_direct-error.log"
+          DIRECT_UI_CODE=$?
           set -e
           echo "REA_N3M_EXIT_CODE=$N3M_CODE" >> "$GITHUB_ENV"
           echo "REA_COBALT_EXIT_CODE=$COBALT_CODE" >> "$GITHUB_ENV"
           echo "REA N3M command exit code: $N3M_CODE"
           echo "REA Cobalt command exit code: $COBALT_CODE"
+          echo "REA direct-file browser flow exit code: $DIRECT_UI_CODE"
           node - <<'NODE'
           const fs = require('node:fs');
           const os = require('node:os');
           const path = require('node:path');
-          for (const name of ['n3m','cobalt']) {
+          for (const name of ['n3m','n3m_direct','cobalt']) {
             const raw = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'rea-' + name + '-result.json'), 'utf8');
             let result;
             try {result = JSON.parse(raw);} catch (_) {console.log(name + ': no parseable capture JSON'); continue;}
@@ -107,7 +111,17 @@ jobs:
               completionKeys: safeKeys(x.completeness),
               artifactKeys: safeKeys(x.artifacts)
             })) : [];
+            const events = Array.isArray(evidence.events?.items) ? evidence.events.items : [];
+            const eventTypeCounts = {};
+            for (const item of events) {
+              const type = typeof item.kind === 'string' ? item.kind : typeof item.type === 'string' ? item.type : 'unknown';
+              eventTypeCounts[type] = (eventTypeCounts[type] || 0) + 1;
+            }
+            const finalAcc = JSON.stringify(Array.isArray(step) ? step[step.length-1]?.artifacts?.accessibility || {} : {});
             console.log('REA_SITE_SUMMARY', name, JSON.stringify({
+              observedYoutubeVerificationText: finalAcc.includes('يوتيوب طلب التحقق'),
+              observedFailedStatusText: finalAcc.includes('فشل') || finalAcc.includes('تعذّر'),
+              eventTypeCounts,
               status, stepCount:summarizedSteps.length, summarizedSteps,
               eventKeys:safeKeys(evidence.events),
               eventCountKeys:Object.keys(counts).slice(0,10),
@@ -116,8 +130,8 @@ jobs:
             }));
           }
           NODE
-          rm -f "$RUNNER_TEMP"/rea-{n3m,cobalt}{,-result,-error}.{json,log} || true
-          if [ "$N3M_CODE" -ne 0 ] || [ "$COBALT_CODE" -ne 0 ]; then
+          rm -f "$RUNNER_TEMP"/rea-{n3m,n3m_direct,cobalt}{,-result,-error}.{json,log} || true
+          if [ "$N3M_CODE" -ne 0 ] || [ "$COBALT_CODE" -ne 0 ] || [ "$DIRECT_UI_CODE" -ne 0 ]; then
             echo "::warning::Some REA captures were incomplete; see command exit codes."
           fi
       - name: Real MP4 staging smoke test
