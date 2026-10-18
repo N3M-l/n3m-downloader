@@ -41,6 +41,36 @@ PROGRESS_TEMPLATE = (
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
+def _proxy_connection_failed(detail: str) -> bool:
+    """Recognize a transport failure to the configured proxy, not source denial."""
+    value = detail.lower()
+    return "proxy" in value and any(
+        phrase in value
+        for phrase in (
+            "could not connect",
+            "failed to connect",
+            "connection refused",
+            "proxy connection failed",
+        )
+    )
+
+
+def _youtube_verification_required(detail: str) -> bool:
+    value = detail.lower()
+    return "sign in to confirm" in value and "bot" in value
+
+
+def _failure_message(detail: str, fallback: str) -> str:
+    if _youtube_verification_required(detail):
+        return (
+            "يوتيوب طلب التحقق من الوصول ورفض التحميل من هذا الخادم. "
+            "جرّب مصدرًا يتيح التنزيل رسميًا أو انتظر حل قيود الاتصال."
+        )
+    if "page needs to be reloaded" in detail.lower():
+        return "يوتيوب رفض تحليل الرابط مؤقتًا. حاول لاحقًا."
+    return fallback
+
+
 class YtDlpEngine:
     key = "ytdlp"
 
@@ -145,12 +175,20 @@ class YtDlpEngine:
             url,
         ]
         code, stdout, stderr = await run_process(command, timeout=75)
+        if code != 0 and "--proxy" in command and _proxy_connection_failed(tail(stderr)):
+            LOGGER.warning("YouTube proxy connection failed during inspection; retrying directly")
+            index = command.index("--proxy")
+            direct_command = command[:index] + command[index + 2 :]
+            code, stdout, stderr = await run_process(direct_command, timeout=75)
         if code != 0:
             detail = tail(stderr)
             LOGGER.info("yt-dlp inspect failed: %s", detail)
             raise EngineError(
-                "inspect_failed",
-                "تعذّر تحليل هذا الرابط. تأكد أن المحتوى عام وليس خاصًا أو محميًا.",
+                "youtube_verification_required" if _youtube_verification_required(detail) else "inspect_failed",
+                _failure_message(
+                    detail,
+                    "تعذّر تحليل هذا الرابط. تأكد أن المحتوى عام وليس خاصًا أو محميًا.",
+                ),
                 detail,
             )
         try:
@@ -261,7 +299,7 @@ class YtDlpEngine:
         return options
 
     # ---------------------------------------------------------------- download
-    async def download(self, job: Job) -> Path:
+    async def download(self, job: Job, *, allow_proxy_retry: bool = True) -> Path:
         if not self.available():
             raise EngineError(
                 "engine_unavailable",
@@ -302,7 +340,7 @@ class YtDlpEngine:
             *self.impersonation_args(),
             *self.extractor_args(),
             *self.cookies_args(),
-            *self.proxy_args(job.url),
+            *(self.proxy_args(job.url) if allow_proxy_retry else []),
             "--max-filesize",
             f"{self.settings.max_filesize_mb}M",
             "--progress-template",
@@ -361,10 +399,17 @@ class YtDlpEngine:
             raise asyncio.CancelledError()
         if code != 0:
             detail = tail(b"".join(stderr_chunks))
+            if allow_proxy_retry and "--proxy" in command and _proxy_connection_failed(detail):
+                LOGGER.warning("YouTube proxy connection failed during download; retrying directly")
+                job.message = "تعذّر اتصال الخادم الوسيط، جارٍ إعادة المحاولة…"
+                return await self.download(job, allow_proxy_retry=False)
             LOGGER.info("yt-dlp download failed (%s): %s", code, detail)
             raise EngineError(
-                "download_failed",
-                "تعذّر إكمال التحميل. قد يكون الرابط محميًا أو غير متاح مؤقتًا.",
+                "youtube_verification_required" if _youtube_verification_required(detail) else "download_failed",
+                _failure_message(
+                    detail,
+                    "تعذّر إكمال التحميل. قد يكون الرابط محميًا أو غير متاح مؤقتًا.",
+                ),
                 detail,
             )
 
