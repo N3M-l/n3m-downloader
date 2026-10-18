@@ -50,7 +50,7 @@ jobs:
               actions: [{step_id:'observe',action:'wait_for_timeout',duration_ms:1800}],
               capture: {at_end:['url','accessibility'],events:['network','page-errors']}
             };
-            fs.writeFileSync(path.join(os.tmpdir(), 'rea-' + name + '.json'), JSON.stringify(scenario));
+            fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'rea-' + name + '.json'), JSON.stringify(scenario));
           }
           NODE
           set +e
@@ -68,7 +68,7 @@ jobs:
           const os = require('node:os');
           const path = require('node:path');
           for (const name of ['n3m','cobalt']) {
-            const raw = fs.readFileSync(path.join(os.tmpdir(), 'rea-' + name + '-result.json'), 'utf8');
+            const raw = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'rea-' + name + '-result.json'), 'utf8');
             let result;
             try {result = JSON.parse(raw);} catch (_) {console.log(name + ': no parseable capture JSON'); continue;}
             const evidence = result.evidence || result;
