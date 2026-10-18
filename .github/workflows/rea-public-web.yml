@@ -47,7 +47,13 @@ jobs:
             const scenario = {
               browser: {mode: 'launch', executable_path: process.env.CHROME, headless: true},
               start_url: {url},
-              actions: [{step_id:'observe',action:'wait_for_timeout',duration_ms:1800}],
+              actions: name === 'n3m'
+                ? [
+                  {step_id:'enter-test-url',action:'fill',locator:{kind:'css',selector:'#media-url'},value:'https://www.youtube.com/watch?v=Zl-HU2U85lI'},
+                  {step_id:'submit-download',action:'click',locator:{kind:'css',selector:'form button[type="submit"]'},timeout_ms:10000},
+                  {step_id:'await-status',action:'wait_for_timeout',duration_ms:10000}
+                ]
+                : [{step_id:'observe',action:'wait_for_timeout',duration_ms:1800}],
               capture: {at_end:['url','accessibility'],events:['network','page-errors']}
             };
             fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'rea-' + name + '.json'), JSON.stringify(scenario));
@@ -88,7 +94,22 @@ jobs:
             const step = evidence.scenario?.steps || evidence.steps || [];
             const status = result.status || evidence.status || result.result?.status || 'unknown';
             const counts = evidence.events?.counts || evidence.scenario?.events?.counts || {};
-            console.log('REA_SITE_SUMMARY', name, JSON.stringify({status,stepCount:Array.isArray(step)?step.length:0,eventCountKeys:Object.keys(counts).slice(0,10)}));
+            const safeStatus = x => typeof x === 'string' && /^[a-zA-Z_-]{1,40}$/.test(x) ? x : null;
+            const summarizedSteps = Array.isArray(step) ? step.map(x => ({
+              keys: safeKeys(x),
+              id: safeStatus(x.step_id),
+              action: safeStatus(x.action?.status || x.action_status || x.status),
+              outcome: safeStatus(x.action?.outcome || x.outcome),
+              completionKeys: safeKeys(x.completeness),
+              artifactKeys: safeKeys(x.artifacts)
+            })) : [];
+            console.log('REA_SITE_SUMMARY', name, JSON.stringify({
+              status, stepCount:summarizedSteps.length, summarizedSteps,
+              eventKeys:safeKeys(evidence.events),
+              eventCountKeys:Object.keys(counts).slice(0,10),
+              completenessKeys:safeKeys(evidence.completeness),
+              limitationsCount:Array.isArray(evidence.limitations)?evidence.limitations.length:0
+            }));
           }
           NODE
           rm -f "$RUNNER_TEMP"/rea-{n3m,cobalt}{,-result,-error}.{json,log} || true
