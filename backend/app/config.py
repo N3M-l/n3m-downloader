@@ -119,6 +119,7 @@ class Settings:
     gallerydl_path: str
     aria2c_path: str
     ffmpeg_path: str
+    ytdlp_player_client: str
 
     @property
     def is_production(self) -> bool:
@@ -184,6 +185,7 @@ class Settings:
             gallerydl_path=_env("GALLERYDL_BIN"),
             aria2c_path=_env("ARIA2C_BIN", "aria2c"),
             ffmpeg_path=_env("FFMPEG_BIN", "ffmpeg"),
+            ytdlp_player_client=_env("YTDLP_PLAYER_CLIENT", "tv,mweb"),
         )
 
     def prepare_dirs(self) -> None:

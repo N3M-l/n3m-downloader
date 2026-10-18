@@ -72,6 +72,13 @@ class YtDlpEngine:
             return ["--impersonate", "chrome"]
         return []
 
+    def extractor_args(self) -> list[str]:
+        """Use the configured YouTube clients; tv/mweb survive datacenter bot checks."""
+        client = self.settings.ytdlp_player_client.strip()
+        if not client:
+            return []
+        return ["--extractor-args", f"youtube:player_client={client}"]
+
     def ffmpeg(self) -> str | None:
         configured = self.settings.ffmpeg_path
         if configured and (Path(configured).is_file() or shutil.which(configured)):
@@ -95,6 +102,7 @@ class YtDlpEngine:
             "1",
             "--no-check-formats",
             *self.impersonation_args(),
+            *self.extractor_args(),
             url,
         ]
         code, stdout, stderr = await run_process(command, timeout=75)
@@ -253,6 +261,7 @@ class YtDlpEngine:
             "--concurrent-fragments",
             "4",
             *self.impersonation_args(),
+            *self.extractor_args(),
             "--max-filesize",
             f"{self.settings.max_filesize_mb}M",
             "--progress-template",
