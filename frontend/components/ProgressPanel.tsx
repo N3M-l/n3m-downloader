@@ -66,7 +66,7 @@ export function ProgressPanel({
         </div>
         <div>
           <dt>الحجم</dt>
-          <dd>
+          <dd dir="ltr">
             {formatBytes(job.downloadedBytes)}
             {job.totalBytes ? ` / ${formatBytes(job.totalBytes)}` : ''}
           </dd>

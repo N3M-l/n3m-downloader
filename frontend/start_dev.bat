@@ -24,10 +24,6 @@ if not exist "node_modules\next\package.json" (
     )
 )
 
-if not exist ".env.local" (
-    if exist ".env.example" copy /y ".env.example" ".env.local" >nul
-)
-
 set NEXT_TELEMETRY_DISABLED=1
 set NODE_ENV=development
 

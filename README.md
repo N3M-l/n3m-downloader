@@ -88,7 +88,6 @@ if (!(Test-Path .venv)) { python -m venv .venv }
 ```powershell
 cd frontend
 if (!(Test-Path node_modules\next)) { npm install }
-copy .env.example .env.local   # NEXT_PUBLIC_ENGINE_URL=http://127.0.0.1:8765
 node node_modules\next\dist\bin\next dev -p 3000
 ```
 
