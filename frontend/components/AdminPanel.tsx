@@ -210,7 +210,8 @@ export function AdminPanel() {
             <section className="panel card">
               <h2>التخزين</h2>
               <p className="card__big">
-                {formatBytes(status.disk.freeGb * 1024 ** 3)} <span>حرة</span>
+                <span dir="ltr">{formatBytes(status.disk.freeGb * 1024 ** 3)}</span>{' '}
+                <span>حرة</span>
               </p>
               <div className="diskbar" role="img" aria-label="استهلاك مساحة التخزين">
                 <span
@@ -264,7 +265,7 @@ export function AdminPanel() {
                 </div>
                 <div>
                   <dt>أقصى حجم</dt>
-                  <dd>{status.limits.maxFilesizeMb} MB</dd>
+                  <dd dir="ltr">{status.limits.maxFilesizeMb} MB</dd>
                 </div>
                 <div>
                   <dt>صلاحية التذكرة</dt>
