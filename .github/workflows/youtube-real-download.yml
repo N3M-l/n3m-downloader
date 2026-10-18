@@ -48,6 +48,32 @@ jobs:
           print('GitHub runner file verified:', size, 'bytes')
           subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1', filename], check=True)
           PY
+      - name: Test independent YouTube.js engine on GitHub runner
+        id: youtubejs
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/ytjs"
+          cd "$RUNNER_TEMP/ytjs"
+          printf '{"type":"module"}\n' > package.json
+          npm install --no-save --no-package-lock --ignore-scripts youtubei.js@18.1.0
+          cat > probe.mjs <<'JS'
+          import { Innertube } from 'youtubei.js';
+          const timeout = setTimeout(() => { console.error('YouTube.js test timeout'); process.exit(3); }, 100000);
+          const youtube = await Innertube.create();
+          const id = 'Zl-HU2U85lI';
+          const info = await youtube.getBasicInfo(id);
+          console.log('Innertube metadata title:', String(info.basic_info?.title || 'UNKNOWN').slice(0, 160));
+          const stream = await youtube.download(id, { type: 'video+audio', quality: 'bestefficiency', format: 'mp4' });
+          let bytes = 0;
+          for await (const chunk of stream) {
+            bytes += chunk.byteLength;
+            if (bytes > 60000000) throw new Error('Safety cap: max 60 MB');
+          }
+          console.log('YouTube.js stream bytes received:', bytes);
+          if (bytes <= 4096) throw new Error('Video file empty');
+          clearTimeout(timeout);
+          JS
+          node probe.mjs
       - name: Test actual file download on Render Oregon staging
         id: remote
         continue-on-error: true
@@ -60,9 +86,11 @@ jobs:
           EXTRACTOR_RESULT: ${{ steps.runner.outcome }}
           REMOTE_RESULT: ${{ steps.remote.outcome }}
           RUNNER_FILE_RESULT: ${{ steps.runner_file.outcome }}
+          YOUTUBEJS_RESULT: ${{ steps.youtubejs.outcome }}
         run: |
           echo "Standalone extractor: $EXTRACTOR_RESULT"
           echo "GitHub runner file test: $RUNNER_FILE_RESULT"
+          echo "Independent YouTube.js test: $YOUTUBEJS_RESULT"
           echo "Render Oregon actual-file test: $REMOTE_RESULT"
           if [ "$REMOTE_RESULT" != "success" ]; then
             echo "::error::YouTube download is not verified working on staging."
