@@ -71,7 +71,16 @@ jobs:
             const raw = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'rea-' + name + '-result.json'), 'utf8');
             let result;
             try {result = JSON.parse(raw);} catch (_) {console.log(name + ': no parseable capture JSON'); continue;}
-            const evidence = result.evidence || result;
+            const safeKeys = obj => obj && typeof obj === 'object' ? Object.keys(obj).slice(0, 20) : [];
+            console.log('REA_JSON_KEYS', name, JSON.stringify({
+              root: safeKeys(result),
+              result: safeKeys(result.result),
+              evidence: safeKeys(result.evidence),
+              data: safeKeys(result.data),
+              scenario: safeKeys(result.scenario),
+              rootStatus: (typeof result.status === 'string' && /^[a-z_]{1,25}$/.test(result.status)) ? result.status : null
+            }));
+            const evidence = result.evidence || result.result?.evidence || result.result || result.data || result;
             const step = evidence.scenario?.steps || evidence.steps || [];
             const status = result.status || evidence.status || result.result?.status || 'unknown';
             const counts = evidence.events?.counts || evidence.scenario?.events?.counts || {};
