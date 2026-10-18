@@ -42,3 +42,7 @@ Thumbs.db
 
 # Local backups (never committed)
 _backups/
+
+# Wrangler local cache
+.wrangler/
+
