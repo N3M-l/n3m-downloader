@@ -46,3 +46,14 @@ jobs:
         run: pnpm test
       - name: Static export
         run: pnpm build
+
+  engine-docker:
+    name: Backend Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image including Deno and EJS
+        run: docker build -f backend/Dockerfile -t n3m-downloader:ci backend
+      - name: Verify Deno and matching yt-dlp EJS
+        run: |
+          docker run --rm --entrypoint /bin/sh n3m-downloader:ci -c 'deno --version && python -m pip show yt-dlp-ejs && python -m yt_dlp --version'
