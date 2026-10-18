@@ -18,13 +18,13 @@ services:
       - key: TRUSTED_ORIGINS
         value: https://n3m.fun,https://www.n3m.fun
       - key: MIN_FREE_GB
-        value: "2"
+        value: "1"
       - key: MAX_FILESIZE_MB
-        value: "2048"
+        value: "1024"
       - key: MAX_CONCURRENT_JOBS
-        value: "2"
+        value: "1"
       - key: MAX_QUEUED_JOBS
-        value: "20"
+        value: "10"
       - key: JOB_RETENTION_MINUTES
         value: "120"
       - key: TICKET_TTL_SECONDS

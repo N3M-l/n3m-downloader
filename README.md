@@ -137,6 +137,7 @@ frontend\build.bat
 - الواجهة تعمل على **Cloudflare Worker** مربوط بمسار `n3m.fun/downloader/*`، مع أصول Next.js الثابتة داخل نفس الـ Worker.
 - المحرك يعمل على **Render** (Docker + FFmpeg + aria2c)، ويُبقي Worker's Cron Trigger الخدمة مستيقظة كل 5 دقائق.
 - `BACKEND/.env` المحلي غير منشور. رمز الإدارة الإنتاجي محفوظ في `_backups/n3m-render-env.txt` على هذا الجهاز، ويمكن استبداله من Render.
+- النطاق الفرعي `downloader.n3m.fun` لم يُربط بعد لأن صلاحية OAuth الحالية لا تسمح بإنشاء سجل DNS؛ الرابط الرسمي الحالي هو المسار `/downloader/`.
 
 ## الإعدادات
 
