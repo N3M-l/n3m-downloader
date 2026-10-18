@@ -126,6 +126,19 @@ frontend\build.bat
 
 > على Windows داخل بيئة مقيّدة قد تحتاج اختبارات الواجهة والبناء إلى تشغيل خارج الـ sandbox لأن Next/Vitest يشغّلان عمليات فرعية.
 
+## النسخة المنشورة
+
+| الجزء | الرابط |
+|---|---|
+| الأداة | <https://n3m.fun/downloader/> |
+| لوحة الإدارة | <https://n3m.fun/downloader/admin/> |
+| المحرك | <https://n3m-downloader-engine.onrender.com> |
+| المصدر | <https://github.com/N3M-l/n3m-downloader> |
+
+- الواجهة تعمل على **Cloudflare Worker** مربوط بمسار `n3m.fun/downloader/*`، مع أصول Next.js الثابتة داخل نفس الـ Worker.
+- المحرك يعمل على **Render** (Docker + FFmpeg + aria2c)، ويُبقي Worker's Cron Trigger الخدمة مستيقظة كل 5 دقائق.
+- `BACKEND/.env` المحلي غير منشور. رمز الإدارة الإنتاجي محفوظ في `_backups/n3m-render-env.txt` على هذا الجهاز، ويمكن استبداله من Render.
+
 ## الإعدادات
 
 كل إعدادات المحرك عبر متغيرات البيئة، ويمكن وضعها في `backend/.env`. راجع [`backend/.env.example`](backend/.env.example).
@@ -150,24 +163,30 @@ frontend\build.bat
 
 ### المحرك — Render (Docker)
 
-1. اربط المستودع في Render واختر **Blueprint**؛ سيقرأ `render.yaml`.
-2. Render يولّد `ADMIN_TOKEN` و`TICKET_SECRET` تلقائيًا. انسخ رمز الإدارة من لوحة Render.
-3. تأكد أن `TRUSTED_ORIGINS` يطابق نطاق الواجهة (`https://n3m.fun,https://www.n3m.fun`).
-4. نقطة الفحص: `/health`.
+1. الخدمة `n3m-downloader-engine` مرتبطة بمستودع GitHub وفرع `master`، وجذر البناء `backend`.
+2. الإعدادات الإنتاجية مضبوطة في Render: `N3M_ENV=production`، `ADMIN_TOKEN`، `TICKET_SECRET`، `TRUSTED_ORIGINS`، وحدود الحجم.
+3. نقطة الفحص: `/health`، والنشر التلقائي مفعّل عند كل push إلى `master`.
 
 > الخطة المجانية تستخدم قرصًا مؤقتًا: الملفات تُحذف عند إعادة النشر أو إعادة التشغيل. التنظيف الدوري يمنع امتلاء القرص أثناء التشغيل.
 
-### الواجهة — Cloudflare Pages
+### الواجهة — Cloudflare Worker
 
-- **Build command:** `pnpm build` (داخل `frontend`)
-- **Build output directory:** `out`
-- **Environment variable:** `NEXT_PUBLIC_ENGINE_URL=https://n3m-downloader-engine.onrender.com`
-
-أضف نطاق `n3m.fun` و`/admin/` سيُخدم من التصدير الثابت. ملف `_headers` يضبط رؤوس الأمان وCSP.
+- الملف: `frontend/wrangler.jsonc` + `frontend/worker/worker.mjs`.
+- البناء:
+  ```powershell
+  cd frontend
+  $env:NEXT_PUBLIC_BASE_PATH='/downloader'
+  $env:NEXT_PUBLIC_ENGINE_URL='https://n3m-downloader-engine.onrender.com'
+  npm run build
+  npx wrangler deploy
+  ```
+- الـ Worker يخدم `/downloader/` و`/downloader/admin/` ويضيف رؤوس CSP والأمان، ويحتفظ بجدولة كل 5 دقائق لإيقاظ Render.
+- `frontend/public/_headers` يبقى لاستخدام Pages إن أردت النشر هناك لاحقًا.
 
 ### منع خمول Render
 
-`.github/workflows/heartbeat.yml` يطلب `/health` كل 10 دقائق. عدّل الرابط إذا غيّرت اسم الخدمة.
+- **Cloudflare Cron Trigger:** `*/5 * * * *` داخل `frontend/wrangler.jsonc` يطلب `/health` تلقائيًا.
+- **GitHub Actions:** `.github/workflows/heartbeat.yml` كل 10 دقائق كطبقة احتياطية.
 
 ## الأمان
 
