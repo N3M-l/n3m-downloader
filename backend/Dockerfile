@@ -21,6 +21,18 @@ RUN curl -fsSL -o /tmp/warp-plus.zip \
     && install -m 0755 /tmp/warp/warp-plus /usr/local/bin/warp-plus \
     && rm -rf /tmp/warp-plus.zip /tmp/warp
 
+# yt-dlp requires a JavaScript runtime to handle YouTube player scripts.
+# Pin and checksum-verify the official Deno x86_64 Linux distribution.
+ARG DENO_VERSION=2.9.7
+ARG DENO_SHA256=c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490
+RUN curl --fail --location --silent --show-error --retry 3 \
+        "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" \
+        --output /tmp/deno.zip \
+    && echo "${DENO_SHA256}  /tmp/deno.zip" | sha256sum --check - \
+    && unzip -q /tmp/deno.zip -d /usr/local/bin \
+    && rm -f /tmp/deno.zip \
+    && /usr/local/bin/deno --version
+
 WORKDIR /app
 
 COPY requirements.txt ./
