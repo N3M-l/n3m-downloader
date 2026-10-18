@@ -66,6 +66,12 @@ class YtDlpEngine:
     def version(self) -> str | None:
         return package_version("yt-dlp")
 
+    def impersonation_args(self) -> list[str]:
+        """Use browser TLS impersonation when curl-cffi is installed."""
+        if module_available("curl_cffi"):
+            return ["--impersonate", "chrome"]
+        return []
+
     def ffmpeg(self) -> str | None:
         configured = self.settings.ffmpeg_path
         if configured and (Path(configured).is_file() or shutil.which(configured)):
@@ -85,6 +91,10 @@ class YtDlpEngine:
             "--no-warnings",
             "--socket-timeout",
             "15",
+            "--extractor-retries",
+            "1",
+            "--no-check-formats",
+            *self.impersonation_args(),
             url,
         ]
         code, stdout, stderr = await run_process(command, timeout=75)
@@ -238,6 +248,11 @@ class YtDlpEngine:
             "3",
             "--fragment-retries",
             "3",
+            "--extractor-retries",
+            "1",
+            "--concurrent-fragments",
+            "4",
+            *self.impersonation_args(),
             "--max-filesize",
             f"{self.settings.max_filesize_mb}M",
             "--progress-template",
