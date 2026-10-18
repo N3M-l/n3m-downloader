@@ -120,3 +120,5 @@ jobs:
           if [ "$N3M_CODE" -ne 0 ] || [ "$COBALT_CODE" -ne 0 ]; then
             echo "::warning::Some REA captures were incomplete; see command exit codes."
           fi
+      - name: Real MP4 staging smoke test
+        run: python3 backend/tests/smoke_remote_direct.py
