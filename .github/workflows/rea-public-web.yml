@@ -1,0 +1,84 @@
+name: REA Read-only Downloader Comparison
+
+on:
+  push:
+    branches: [diagnostics/rea-readonly-20261018]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rea-public-web:
+    name: Compare public downloader pages using REA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Locate isolated browser
+        id: chrome
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "CHROME=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "CHROME=$(command -v chromium)" >> "$GITHUB_ENV"
+          else
+            echo "No preinstalled Chromium-family browser" >&2
+            exit 1
+          fi
+      - name: Install pinned REA in CI only
+        run: |
+          npm --version
+          npx --yes rea-agents@6.5.0 --help >/dev/null
+      - name: Run bounded public-page captures
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const tests = {
+            n3m: 'https://n3m.fun/downloader/',
+            cobalt: 'https://cobalt.tools/'
+          };
+          for (const [name, url] of Object.entries(tests)) {
+            const scenario = {
+              browser: {mode: 'launch', executable_path: process.env.CHROME, headless: true},
+              start_url: {url},
+              actions: [{step_id:'observe',action:'wait_for_timeout',duration_ms:1800}],
+              capture: {at_end:['url','accessibility'],events:['network','page-errors']}
+            };
+            fs.writeFileSync(path.join(os.tmpdir(), 'rea-' + name + '.json'), JSON.stringify(scenario));
+          }
+          NODE
+          set +e
+          npx --yes rea-agents@6.5.0 capture-browser-scenario "$RUNNER_TEMP/rea-n3m.json" --json > "$RUNNER_TEMP/rea-n3m-result.json" 2> "$RUNNER_TEMP/rea-n3m-error.log"
+          N3M_CODE=$?
+          npx --yes rea-agents@6.5.0 capture-browser-scenario "$RUNNER_TEMP/rea-cobalt.json" --json > "$RUNNER_TEMP/rea-cobalt-result.json" 2> "$RUNNER_TEMP/rea-cobalt-error.log"
+          COBALT_CODE=$?
+          set -e
+          echo "REA_N3M_EXIT_CODE=$N3M_CODE" >> "$GITHUB_ENV"
+          echo "REA_COBALT_EXIT_CODE=$COBALT_CODE" >> "$GITHUB_ENV"
+          echo "REA N3M command exit code: $N3M_CODE"
+          echo "REA Cobalt command exit code: $COBALT_CODE"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          for (const name of ['n3m','cobalt']) {
+            const raw = fs.readFileSync(path.join(os.tmpdir(), 'rea-' + name + '-result.json'), 'utf8');
+            let result;
+            try {result = JSON.parse(raw);} catch (_) {console.log(name + ': no parseable capture JSON'); continue;}
+            const evidence = result.evidence || result;
+            const step = evidence.scenario?.steps || evidence.steps || [];
+            const status = result.status || evidence.status || result.result?.status || 'unknown';
+            const counts = evidence.events?.counts || evidence.scenario?.events?.counts || {};
+            console.log('REA_SITE_SUMMARY', name, JSON.stringify({status,stepCount:Array.isArray(step)?step.length:0,eventCountKeys:Object.keys(counts).slice(0,10)}));
+          }
+          NODE
+          rm -f "$RUNNER_TEMP"/rea-{n3m,cobalt}{,-result,-error}.{json,log} || true
+          if [ "$N3M_CODE" -ne 0 ] || [ "$COBALT_CODE" -ne 0 ]; then
+            echo "::warning::Some REA captures were incomplete; see command exit codes."
+          fi
