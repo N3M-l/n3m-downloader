@@ -12,7 +12,9 @@
   },
   "routes": [
     { "pattern": "n3m.fun/downloader", "zone_name": "n3m.fun" },
-    { "pattern": "n3m.fun/downloader/*", "zone_name": "n3m.fun" }
+    { "pattern": "n3m.fun/downloader/*", "zone_name": "n3m.fun" },
+    { "pattern": "downloader.n3m.fun", "zone_name": "n3m.fun" },
+    { "pattern": "downloader.n3m.fun/*", "zone_name": "n3m.fun" }
   ],
   "triggers": {
     "crons": ["*/5 * * * *"]
